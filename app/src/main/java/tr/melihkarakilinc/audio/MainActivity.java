@@ -1,7 +1,5 @@
 package tr.melihkarakilinc.audio;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -9,6 +7,7 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
+import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.media.audiofx.AcousticEchoCanceler;
 import android.media.audiofx.NoiseSuppressor;
@@ -38,7 +37,7 @@ public class MainActivity extends Activity {
     Boolean recording;
     int sampleRateInHz = 48000;
     private String TAG = "TAG";
-
+    MediaPlayer mediaPlayer;
     /**
      * Called when the activity is first created.
      */
@@ -47,9 +46,9 @@ public class MainActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        startRec = (Button) findViewById(R.id.startrec);
-        stopRec = (Button) findViewById(R.id.stoprec);
-        playBack = (Button) findViewById(R.id.playback);
+        startRec = findViewById(R.id.startrec);
+        stopRec = findViewById(R.id.stoprec);
+        playBack = findViewById(R.id.playback);
 
         startRec.setOnClickListener(startRecOnClickListener);
         stopRec.setOnClickListener(stopRecOnClickListener);
@@ -69,7 +68,6 @@ public class MainActivity extends Activity {
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 minBufferSizeIn);
-
     }
 
     View.OnClickListener startRecOnClickListener
@@ -87,30 +85,25 @@ public class MainActivity extends Activity {
                     recording = true;
                     startRecord();
                 }
-
             });
-
             recordThread.start();
-
         }
     };
 
-
     View.OnClickListener stopRecOnClickListener
             = new View.OnClickListener() {
-
         @Override
         public void onClick(View arg0) {
             playBack.setEnabled(true);
             startRec.setEnabled(false);
             stopRec.setEnabled(false);
             recording = false;
+            mediaPlayer.stop();
+            mediaPlayer.release();
         }
     };
 
-
-
-    View.OnClickListener playBackOnClickListener
+    final View.OnClickListener playBackOnClickListener
             = new View.OnClickListener() {
 
         @Override
@@ -120,9 +113,7 @@ public class MainActivity extends Activity {
             stopRec.setEnabled(false);
             playRecord();
         }
-
     };
-
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private void startRecord() {
@@ -149,6 +140,9 @@ public class MainActivity extends Activity {
                 aec = AcousticEchoCanceler.create(audioRecord.getAudioSessionId());
                 if (aec != null) {
                     aec.setEnabled(true);
+                    mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.music);
+                    mediaPlayer.setVolume(20f,20f);
+                    mediaPlayer.start();
                 } else {
                     Log.e(TAG, "AudioInput: AcousticEchoCanceler is null and not enabled");
                 }
@@ -192,25 +186,30 @@ public class MainActivity extends Activity {
             dataInputStream.close();
 
             AudioTrack audioTrack = new AudioTrack(
-                    AudioManager.STREAM_MUSIC, sampleRateInHz,
+                    AudioManager.MODE_IN_COMMUNICATION, sampleRateInHz,
                     AudioFormat.CHANNEL_OUT_MONO,
                     AudioFormat.ENCODING_PCM_16BIT,
                     bufferSizeInBytes,
                     AudioTrack.MODE_STREAM,
                     audioRecord.getAudioSessionId());
-            while(audioTrack.getState() != AudioTrack.STATE_INITIALIZED){
+            while (audioTrack.getState() != AudioTrack.STATE_INITIALIZED) {
 
             }
             audioTrack.play();
             audioTrack.write(audioData, 0, bufferSizeInBytes);
-
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        //mediaPlayer.stop();
+        //mediaPlayer.release();
+
+    }
 }
