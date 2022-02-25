@@ -1,7 +1,7 @@
 package tr.melihkarakilinc.audio;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -17,6 +17,9 @@ import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+
+import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -38,6 +41,16 @@ public class MainActivity extends Activity {
     int sampleRateInHz = 48000;
     private String TAG = "TAG";
     MediaPlayer mediaPlayer;
+
+    private Integer REQUEST_PERMISION = 1;
+
+    private final String[] permission = new String[]{Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.MODIFY_AUDIO_SETTINGS,
+            Manifest.permission_group.STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+    };
+
     /**
      * Called when the activity is first created.
      */
@@ -45,6 +58,9 @@ public class MainActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        ActivityCompat.requestPermissions(this, permission, REQUEST_PERMISION);
+
         setContentView(R.layout.activity_main);
         startRec = findViewById(R.id.startrec);
         stopRec = findViewById(R.id.stoprec);
@@ -80,6 +96,7 @@ public class MainActivity extends Activity {
             stopRec.setEnabled(true);
             Thread recordThread = new Thread(new Runnable() {
 
+                @RequiresApi(api = Build.VERSION_CODES.P)
                 @Override
                 public void run() {
                     recording = true;
@@ -98,14 +115,20 @@ public class MainActivity extends Activity {
             startRec.setEnabled(false);
             stopRec.setEnabled(false);
             recording = false;
-            mediaPlayer.stop();
-            mediaPlayer.release();
+            try {
+                mediaPlayer.stop();
+                mediaPlayer.release();
+            } catch (Exception e) {
+                Log.e(TAG, "Stopped Error");
+            }
+
         }
     };
 
     final View.OnClickListener playBackOnClickListener
             = new View.OnClickListener() {
 
+        @RequiresApi(api = Build.VERSION_CODES.R)
         @Override
         public void onClick(View v) {
             playBack.setEnabled(false);
@@ -115,7 +138,7 @@ public class MainActivity extends Activity {
         }
     };
 
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    @RequiresApi(api = Build.VERSION_CODES.P)
     private void startRecord() {
         File file = new File(Environment.getExternalStorageDirectory(), "test.pcm");
 
@@ -127,6 +150,10 @@ public class MainActivity extends Activity {
             NoiseSuppressor ns;
             AcousticEchoCanceler aec;
 
+
+            mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.music);
+            mediaPlayer.start();
+
             if (NoiseSuppressor.isAvailable()) {
                 ns = NoiseSuppressor.create(audioRecord.getAudioSessionId());
                 if (ns != null) {
@@ -137,12 +164,10 @@ public class MainActivity extends Activity {
             }
 
             if (AcousticEchoCanceler.isAvailable()) {
+                Log.e("AcousticEchoCanceler", "AcousticEchoCanceler.isAvailable() is TRUE");
                 aec = AcousticEchoCanceler.create(audioRecord.getAudioSessionId());
                 if (aec != null) {
                     aec.setEnabled(true);
-                    mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.music);
-                    mediaPlayer.setVolume(20f,20f);
-                    mediaPlayer.start();
                 } else {
                     Log.e(TAG, "AudioInput: AcousticEchoCanceler is null and not enabled");
                 }
