@@ -31,6 +31,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+@RequiresApi(api = Build.VERSION_CODES.R)
 public class MainActivity extends Activity {
 
     Button startRec, stopRec, playBack;
@@ -41,14 +42,17 @@ public class MainActivity extends Activity {
     int sampleRateInHz = 48000;
     private String TAG = "TAG";
     MediaPlayer mediaPlayer;
+    File file;
 
     private Integer REQUEST_PERMISION = 1;
 
     private final String[] permission = new String[]{Manifest.permission.RECORD_AUDIO,
             Manifest.permission.MODIFY_AUDIO_SETTINGS,
             Manifest.permission_group.STORAGE,
+            Manifest.permission.MANAGE_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.MODIFY_PHONE_STATE
     };
 
     /**
@@ -94,14 +98,9 @@ public class MainActivity extends Activity {
             playBack.setEnabled(false);
             startRec.setEnabled(false);
             stopRec.setEnabled(true);
-            Thread recordThread = new Thread(new Runnable() {
-
-                @RequiresApi(api = Build.VERSION_CODES.P)
-                @Override
-                public void run() {
-                    recording = true;
-                    startRecord();
-                }
+            Thread recordThread = new Thread(() -> {
+                recording = true;
+                startRecord();
             });
             recordThread.start();
         }
@@ -138,9 +137,10 @@ public class MainActivity extends Activity {
         }
     };
 
+    @SuppressLint("NewApi")
     @RequiresApi(api = Build.VERSION_CODES.P)
     private void startRecord() {
-        File file = new File(Environment.getExternalStorageDirectory(), "test.pcm");
+        file = new File(Environment.getExternalStorageDirectory(), "test.pcm");
 
         try {
             FileOutputStream outputStream = new FileOutputStream(file);
@@ -233,8 +233,16 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        //mediaPlayer.stop();
-        //mediaPlayer.release();
+    }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            file.delete();
+            Log.e("FILE_PATH",file.getPath().toString());
+        }catch (Exception e){
+
+        }
     }
 }
